@@ -1,0 +1,23 @@
+package com.redeyesncode.amazonchimekotlin.data
+
+import com.amazonaws.services.chime.sdk.meetings.session.Attendee
+import com.amazonaws.services.chime.sdk.meetings.session.Meeting
+import com.google.gson.annotations.SerializedName
+
+data class JoinMeetingResponse(
+    @SerializedName("JoinInfo") val joinInfo: MeetingInfo
+)
+
+data class MeetingInfo(
+    @SerializedName("Meeting") val meetingResponse: MeetingResponse,
+    @SerializedName("Attendee") val attendeeResponse: AttendeeResponse,
+    @SerializedName("PrimaryExternalMeetingId") val primaryExternalMeetingId: String
+)
+
+data class MeetingResponse(
+    @SerializedName("Meeting") val meeting: Meeting
+)
+
+data class AttendeeResponse(
+    @SerializedName("Attendee") val attendee: Attendee
+)

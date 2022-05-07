@@ -1,0 +1,189 @@
+package com.redeyesncode.amazonchimekotlin.demoapp.activity
+
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.widget.Toast
+import androidx.lifecycle.ViewModelProvider
+import com.amazonaws.services.chime.sdk.meetings.audiovideo.AudioVideoConfiguration
+import com.amazonaws.services.chime.sdk.meetings.audiovideo.AudioVideoFacade
+import com.amazonaws.services.chime.sdk.meetings.audiovideo.audio.AudioMode
+import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.capture.CameraCaptureSource
+import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.capture.DefaultCameraCaptureSource
+import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.capture.DefaultSurfaceTextureCaptureSourceFactory
+import com.amazonaws.services.chime.sdk.meetings.audiovideo.video.gl.EglCoreFactory
+import com.amazonaws.services.chime.sdk.meetings.device.MediaDevice
+import com.amazonaws.services.chime.sdk.meetings.session.*
+import com.amazonaws.services.chime.sdk.meetings.utils.logger.ConsoleLogger
+import com.amazonaws.services.chime.sdk.meetings.utils.logger.LogLevel
+import com.google.gson.Gson
+import com.redeyesncode.amazonchimekotlin.R
+import com.redeyesncode.amazonchimekotlin.data.JoinMeetingResponse
+import com.redeyesncode.amazonchimekotlin.demoapp.fragments.DeviceManagementFragment
+import com.redeyesncode.amazonchimekotlin.demoapp.fragments.MeetingFragment
+import com.redeyesncode.amazonchimekotlin.device.ScreenShareManager
+import com.redeyesncode.amazonchimekotlin.model.MeetingSessionModel
+import com.redeyesncode.amazonchimekotlin.utils.CpuVideoProcessor
+import com.redeyesncode.amazonchimekotlin.utils.GpuVideoProcessor
+
+class MeetingActivity : AppCompatActivity(),
+    DeviceManagementFragment.DeviceManagementEventListener,
+    MeetingFragment.RosterViewEventListener {
+
+    private val logger = ConsoleLogger(LogLevel.DEBUG)
+    private val gson = Gson()
+    private val meetingSessionModel: MeetingSessionModel by lazy { ViewModelProvider(this)[MeetingSessionModel::class.java] }
+
+    private lateinit var meetingId: String
+    private var primaryExternalMeetingId: String? = null
+    private lateinit var name: String
+    private lateinit var audioVideoConfig: AudioVideoConfiguration
+    private lateinit var meetingEndpointUrl: String
+
+    private var cachedDevice: MediaDevice? = null
+
+    private val TAG = "InMeetingActivity"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_meeting)
+        meetingId = intent.extras?.getString(HomeActivity.MEETING_ID_KEY) as String
+        name = intent.extras?.getString(HomeActivity.NAME_KEY) as String
+        val audioMode = intent.extras?.getInt(HomeActivity.AUDIO_MODE_KEY)?.let { intValue ->
+            AudioMode.from(intValue, defaultAudioMode = AudioMode.Stereo48K)
+        } ?: AudioMode.Stereo48K
+        audioVideoConfig = AudioVideoConfiguration(audioMode = audioMode)
+        meetingEndpointUrl = intent.extras?.getString(HomeActivity.MEETING_ENDPOINT_KEY) as String
+
+        if (savedInstanceState == null) {
+            val meetingResponseJson =
+                intent.extras?.getString(HomeActivity.MEETING_RESPONSE_KEY) as String
+            val sessionConfig = createSessionConfigurationAndExtractPrimaryMeetingInformation(meetingResponseJson)
+            val meetingSession = sessionConfig?.let {
+                logger.info(TAG, "Creating meeting session for meeting Id: $meetingId")
+
+                DefaultMeetingSession(
+                    it,
+                    logger,
+                    applicationContext,
+                    // Note if the following isn't provided app will (as expected) crash if we use custom video source
+                    // since an EglCoreFactory will be internal created and will be using a different shared EGLContext.
+                    // However the internal default capture would work fine, since it is initialized using
+                    // that internally created default EglCoreFactory, and can be smoke tested by removing this
+                    // argument and toggling use of custom video source before starting video
+                    meetingSessionModel.eglCoreFactory
+                )
+            }
+
+            if (meetingSession == null) {
+                Toast.makeText(
+                    applicationContext,
+                    getString(R.string.user_notification_meeting_start_error),
+                    Toast.LENGTH_LONG
+                ).show()
+                finish()
+            } else {
+                meetingSessionModel.meetingSession = meetingSession
+                meetingSessionModel.primaryExternalMeetingId = primaryExternalMeetingId
+            }
+
+            val surfaceTextureCaptureSourceFactory = DefaultSurfaceTextureCaptureSourceFactory(logger, meetingSessionModel.eglCoreFactory)
+            meetingSessionModel.cameraCaptureSource = DefaultCameraCaptureSource(applicationContext, logger, surfaceTextureCaptureSourceFactory).apply {
+                eventAnalyticsController = meetingSession?.eventAnalyticsController
+            }
+            meetingSessionModel.cpuVideoProcessor = CpuVideoProcessor(logger, meetingSessionModel.eglCoreFactory)
+            meetingSessionModel.gpuVideoProcessor = GpuVideoProcessor(logger, meetingSessionModel.eglCoreFactory)
+
+            val deviceManagementFragment = DeviceManagementFragment.newInstance(meetingId, name, audioVideoConfig)
+            supportFragmentManager
+                .beginTransaction()
+                .add(R.id.root_layout, deviceManagementFragment, "deviceManagement")
+                .commit()
+        }
+    }
+
+    override fun onJoinMeetingClicked() {
+        val rosterViewFragment = MeetingFragment.newInstance(meetingId, audioVideoConfig, meetingEndpointUrl)
+        supportFragmentManager
+            .beginTransaction()
+            .replace(R.id.root_layout, rosterViewFragment, "rosterViewFragment")
+            .commit()
+    }
+
+    override fun onCachedDeviceSelected(mediaDevice: MediaDevice) {
+        cachedDevice = mediaDevice
+    }
+
+    override fun onLeaveMeeting() {
+        onBackPressed()
+    }
+
+    override fun onDestroy() {
+        if (isFinishing) {
+            cleanup()
+        }
+        super.onDestroy()
+    }
+
+    private fun cleanup() {
+        meetingSessionModel.audioVideo.stopLocalVideo()
+        meetingSessionModel.audioVideo.stopRemoteVideo()
+        meetingSessionModel.audioVideo.stopContentShare()
+        meetingSessionModel.audioVideo.stop()
+        meetingSessionModel.cameraCaptureSource.stop()
+        meetingSessionModel.gpuVideoProcessor.release()
+        meetingSessionModel.cpuVideoProcessor.release()
+        meetingSessionModel.screenShareManager?.stop()
+        meetingSessionModel.screenShareManager?.release()
+    }
+
+    fun getAudioVideo(): AudioVideoFacade = meetingSessionModel.audioVideo
+
+    fun getMeetingSessionConfiguration(): MeetingSessionConfiguration = meetingSessionModel.configuration
+
+    fun getMeetingSessionCredentials(): MeetingSessionCredentials = meetingSessionModel.credentials
+
+    fun getPrimaryExternalMeetingId(): String? = meetingSessionModel.primaryExternalMeetingId
+
+    fun getCachedDevice(): MediaDevice? = cachedDevice
+    fun resetCachedDevice() {
+        cachedDevice = null
+    }
+
+    fun getEglCoreFactory(): EglCoreFactory = meetingSessionModel.eglCoreFactory
+
+    fun getCameraCaptureSource(): CameraCaptureSource = meetingSessionModel.cameraCaptureSource
+
+    fun getGpuVideoProcessor(): GpuVideoProcessor = meetingSessionModel.gpuVideoProcessor
+
+    fun getCpuVideoProcessor(): CpuVideoProcessor = meetingSessionModel.cpuVideoProcessor
+
+    fun getScreenShareManager(): ScreenShareManager? = meetingSessionModel.screenShareManager
+
+    fun setScreenShareManager(screenShareManager: ScreenShareManager?) {
+        meetingSessionModel.screenShareManager = screenShareManager
+    }
+
+    private fun urlRewriter(url: String): String {
+        // You can change urls by url.replace("example.com", "my.example.com")
+        return url
+    }
+
+    private fun createSessionConfigurationAndExtractPrimaryMeetingInformation(response: String?): MeetingSessionConfiguration? {
+        if (response.isNullOrBlank()) return null
+        return try {
+            val joinMeetingResponse = gson.fromJson(response, JoinMeetingResponse::class.java)
+            primaryExternalMeetingId = joinMeetingResponse.joinInfo.primaryExternalMeetingId
+            MeetingSessionConfiguration(
+                CreateMeetingResponse(joinMeetingResponse.joinInfo.meetingResponse.meeting),
+                CreateAttendeeResponse(joinMeetingResponse.joinInfo.attendeeResponse.attendee),
+                ::urlRewriter
+            )
+        } catch (exception: Exception) {
+            logger.error(
+                TAG,
+                "Error creating session configuration: ${exception.localizedMessage}"
+            )
+            null
+        }
+    }
+}

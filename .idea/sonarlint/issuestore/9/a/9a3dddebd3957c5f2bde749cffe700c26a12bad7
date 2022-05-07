@@ -1,0 +1,44 @@
+
+=
+java:S16049"(Make this anonymous inner class a lambda(ç’ƒL
+C
+java:S1604t"(Make this anonymous inner class a lambda(äë¬±üÿÿÿÿ
+=
+java:S1604Q"(Make this anonymous inner class a lambda(ç’ƒL
+>
+java:S1604’"(Make this anonymous inner class a lambda(ç’ƒL
+r
+java:S1104""WMake reactDrawer a static final constant or non-public and provide accessors if needed.(©ËÍ“øÿÿÿÿ
+h
+java:S1104%"SMake eglCore a static final constant or non-public and provide accessors if needed.(¸ˆŒ
+m
+java:S1104'"RMake thread a static final constant or non-public and provide accessors if needed.(ÞÜûúûÿÿÿÿ
+n
+java:S1104("SMake handler a static final constant or non-public and provide accessors if needed.(‘ñÑÈÿÿÿÿÿ
+G
+java:S1444'",Make this "public static thread" field final(ÞÜûúûÿÿÿÿ
+H
+java:S1444("-Make this "public static handler" field final(‘ñÑÈÿÿÿÿÿ
+y	java:S116*"_Rename this field "DUMMY_PBUFFER_OFFSET" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‹¿ù½ÿÿÿÿÿ
+h	java:S116+"NRename this field "TAG" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(´Çâ©ýÿÿÿÿ
+<
+java:S1170*"!Make this final field static too.(‹¿ù½ÿÿÿÿÿ
+<
+java:S1170+"!Make this final field static too.(´Çâ©ýÿÿÿÿ
+L
+java:S26966"6Make the enclosing method "static" or remove this set.(»ÆˆÁ
+T
+java:S1854?">Remove this useless assignment to local variable "eglSurface".(ÍœÂ
+T
+java:S1854>">Remove this useless assignment to local variable "eglSurface".(Â†•¸
+E
+java:S1481>"/Remove this unused "eglSurface" local variable.(Â†•¸
+V	java:S125\"<This block of commented-out lines of code should be removed.(À¡‚ûùÿÿÿÿ
+W	java:S125ƒ"<This block of commented-out lines of code should be removed.(Þ¸´Âøÿÿÿÿ
+R	java:S125½"<This block of commented-out lines of code should be removed.(Çÿ’¬
+U
+java:S1128"?Remove this unused import 'com.xodee.client.video.ContentHint'.(‰ðú¼
+J
+java:S1068$"/Remove this unused "contentHint" private field.(ƒøØæþÿÿÿÿ
+H
+java:S1144‘",Remove this unused private "release" method.(¦ÞÑ›ùÿÿÿÿ

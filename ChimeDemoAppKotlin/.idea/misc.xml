@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DesignSurface">
+    <option name="filePathToZoomLevelMap">
+      <map>
+        <entry key="app/src/main/res/layout/activity_main.xml" value="0.35625" />
+        <entry key="app/src/main/res/layout/activity_meeting.xml" value="0.35625" />
+        <entry key="app/src/main/res/layout/activity_transcription_config.xml" value="0.35625" />
+        <entry key="app/src/main/res/layout/fragment_debug_settings.xml" value="0.35625" />
+        <entry key="app/src/main/res/layout/fragment_device_management.xml" value="0.35625" />
+        <entry key="app/src/main/res/layout/fragment_meeting.xml" value="0.35625" />
+        <entry key="app/src/main/res/layout/fragment_transcription_config.xml" value="0.25" />
+        <entry key="app/src/main/res/layout/item_video.xml" value="0.35625" />
+        <entry key="app/src/main/res/layout/row_caption.xml" value="0.35625" />
+        <entry key="app/src/main/res/layout/row_language_option.xml" value="0.35625" />
+        <entry key="app/src/main/res/layout/row_message.xml" value="0.35625" />
+        <entry key="app/src/main/res/menu/priority_popup_menu.xml" value="0.35625" />
+      </map>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="Android Studio default JDK" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/build/classes" />
+  </component>
+  <component name="ProjectType">
+    <option name="id" value="Android" />
+  </component>
+</project>
